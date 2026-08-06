@@ -103,7 +103,7 @@ class PASCALContext(BaseDataset):
 
         image = cv2.imread(os.path.join(self.detail.img_folder,name),
                            cv2.IMREAD_COLOR)
-        label = np.asarray(self.masks[img_id],dtype=np.int)
+        label = np.asarray(self.masks[img_id],dtype=int)
         size = image.shape
 
         if self.split == 'val':
