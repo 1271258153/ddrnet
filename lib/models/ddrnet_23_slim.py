@@ -202,7 +202,7 @@ class segmenthead(nn.Module):
 
 class DualResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=19, planes=64, spp_planes=128, head_planes=128, augment=True):
+    def __init__(self, block, layers, num_classes=10, planes=64, spp_planes=128, head_planes=128, augment=True):
         super(DualResNet, self).__init__()
 
         highres_planes = planes * 2
@@ -342,11 +342,12 @@ class DualResNet(nn.Module):
             return x_      
 
 def DualResNet_imagenet(cfg, pretrained=False):
-    model = DualResNet(BasicBlock, [2, 2, 2, 2], num_classes=19, planes=32, spp_planes=128, head_planes=64, augment=True)
+    model = DualResNet(BasicBlock, [2, 2, 2, 2], num_classes=10, planes=32, spp_planes=128, head_planes=64, augment=True)
     if pretrained:
         pretrained_state = torch.load(cfg.MODEL.PRETRAINED, map_location='cpu') 
         model_dict = model.state_dict()
         pretrained_state = {k: v for k, v in pretrained_state.items() if (k in model_dict and v.shape == model_dict[k].shape)}
+        # 分类头通道数与预训练不一致时（如 19→10）会自动跳过，只加载 backbone
         model_dict.update(pretrained_state)
         
         model.load_state_dict(model_dict, strict = False)
