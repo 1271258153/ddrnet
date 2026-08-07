@@ -60,7 +60,7 @@ def hconcat(imgs, gap=4, gap_color=(255, 255, 255)):
 def main():
     parser = argparse.ArgumentParser(description='Generate 4-panel comparison images')
     parser.add_argument('--cfg', default='experiments/cityscapes/test.yaml', type=str)
-    parser.add_argument('--pred-dir', default='output/infrared_images/evaluation_result/test_results',
+    parser.add_argument('--pred-dir', default='output/infrared_images/evaluation_result',
                         type=str, help='彩色预测 mask 目录')
     parser.add_argument('--out-dir', default='output/infrared_images/comparison_images',
                         type=str, help='对比图输出目录')

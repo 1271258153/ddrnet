@@ -209,7 +209,7 @@ def testval(config, test_dataset, testloader, model,
                 config.TRAIN.IGNORE_LABEL)
 
             if sv_pred:
-                sv_path = os.path.join(sv_dir, 'test_results')
+                sv_path = sv_dir
                 if not os.path.exists(sv_path):
                     os.makedirs(sv_path, exist_ok=True)
                 test_dataset.save_pred2(image, pred, sv_path, name)

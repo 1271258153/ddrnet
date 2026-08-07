@@ -11,7 +11,7 @@ PRINT_FREQ: 10
 DATASET:
   DATASET: infrared_images
   ROOT: data/
-  TEST_SET: 'list/infrared_images/evaluation.lst'
+  TEST_SET: 'list/infrared_images/evaluation.lst'  # 训练时改为val.lst, 评估时改为evaluation.lst
   TRAIN_SET: 'list/infrared_images/train.lst'
   NUM_CLASSES: 10
 MODEL:
