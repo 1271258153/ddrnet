@@ -10,6 +10,41 @@ BatchNorm2d = nn.BatchNorm2d
 bn_mom = 0.1
 
 
+class EMA(nn.Module):
+    """Efficient Multi-Scale Attention (ICASSP 2023).
+    在通道维度分组后，用 1x1/3x3 双分支 + 跨空间交互生成注意力权重。
+    """
+    def __init__(self, channels, factor=8):
+        super(EMA, self).__init__()
+        self.groups = factor
+        assert channels // self.groups > 0
+        self.softmax = nn.Softmax(-1)
+        self.agp = nn.AdaptiveAvgPool2d((1, 1))
+        self.pool_h = nn.AdaptiveAvgPool2d((None, 1))
+        self.pool_w = nn.AdaptiveAvgPool2d((1, None))
+        self.gn = nn.GroupNorm(channels // self.groups, channels // self.groups)
+        self.conv1x1 = nn.Conv2d(channels // self.groups, channels // self.groups,
+                                 kernel_size=1, stride=1, padding=0)
+        self.conv3x3 = nn.Conv2d(channels // self.groups, channels // self.groups,
+                                 kernel_size=3, stride=1, padding=1)
+
+    def forward(self, x):
+        b, c, h, w = x.size()
+        group_x = x.reshape(b * self.groups, -1, h, w)
+        x_h = self.pool_h(group_x)
+        x_w = self.pool_w(group_x).permute(0, 1, 3, 2)
+        hw = self.conv1x1(torch.cat([x_h, x_w], dim=2))
+        x_h, x_w = torch.split(hw, [h, w], dim=2)
+        x1 = self.gn(group_x * x_h.sigmoid() * x_w.permute(0, 1, 3, 2).sigmoid())
+        x2 = self.conv3x3(group_x)
+        x11 = self.softmax(self.agp(x1).reshape(b * self.groups, -1, 1).permute(0, 2, 1))
+        x12 = x2.reshape(b * self.groups, -1, h * w)
+        x21 = self.softmax(self.agp(x2).reshape(b * self.groups, -1, 1).permute(0, 2, 1))
+        x22 = x1.reshape(b * self.groups, -1, h * w)
+        weights = (torch.matmul(x11, x12) + torch.matmul(x21, x22)).reshape(b * self.groups, 1, h, w)
+        return (group_x * weights.sigmoid()).reshape(b, c, h, w)
+
+
 def conv3x3(in_planes, out_planes, stride=1):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
@@ -202,7 +237,7 @@ class segmenthead(nn.Module):
 
 class DualResNet(nn.Module):
 
-    def __init__(self, block, layers, num_classes=10, planes=64, spp_planes=128, head_planes=128, augment=True):
+    def __init__(self, block, layers, num_classes=10, planes=64, spp_planes=128, head_planes=128, augment=True, use_ema=False, ema_factor=8):
         super(DualResNet, self).__init__()
 
         highres_planes = planes * 2
@@ -260,6 +295,11 @@ class DualResNet(nn.Module):
             self.seghead_extra = segmenthead(highres_planes, head_planes, num_classes)            
 
         self.final_layer = segmenthead(planes * 4, head_planes, num_classes)
+
+        # EMA 注意力，作用于最终融合特征（planes*4 通道）；可通过 use_ema 开关
+        self.use_ema = use_ema
+        if self.use_ema:
+            self.ema = EMA(planes * 4, factor=ema_factor)
 
 
         for m in self.modules():
@@ -333,7 +373,10 @@ class DualResNet(nn.Module):
                         size=[height_output, width_output],
                         mode='bilinear')
 
-        x_ = self.final_layer(x + x_)
+        feat = x + x_
+        if self.use_ema:
+            feat = self.ema(feat)
+        x_ = self.final_layer(feat)
 
         if self.augment: 
             x_extra = self.seghead_extra(temp)
@@ -342,7 +385,8 @@ class DualResNet(nn.Module):
             return x_      
 
 def DualResNet_imagenet(cfg, pretrained=False):
-    model = DualResNet(BasicBlock, [2, 2, 2, 2], num_classes=10, planes=32, spp_planes=128, head_planes=64, augment=True)
+    model = DualResNet(BasicBlock, [2, 2, 2, 2], num_classes=10, planes=32, spp_planes=128, head_planes=64, augment=True,
+                      use_ema=cfg.MODEL.USE_EMA, ema_factor=cfg.MODEL.EMA_FACTOR)
     if pretrained:
         pretrained_state = torch.load(cfg.MODEL.PRETRAINED, map_location='cpu') 
         model_dict = model.state_dict()

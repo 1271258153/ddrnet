@@ -118,11 +118,16 @@ def main():
     
     start = timeit.default_timer()
     
+    # 按测试集名生成彩色 mask 保存目录，如 val.lst -> output/infrared_images/val_result
+    set_name = os.path.splitext(os.path.basename(config.DATASET.TEST_SET))[0]
+    sv_dir = os.path.join(config.OUTPUT_DIR, config.DATASET.DATASET, set_name + '_result')
+
     mean_IoU, IoU_array, pixel_acc, mean_acc = testval(config, 
                                                         test_dataset, 
                                                         testloader, 
                                                         model,
-                                                        sv_pred=False)
+                                                        sv_dir=sv_dir,
+                                                        sv_pred=True)
 
     msg = 'MeanIU: {: 4.4f}, Pixel_Acc: {: 4.4f}, \
         Mean_Acc: {: 4.4f}, Class IoU: '.format(mean_IoU, 

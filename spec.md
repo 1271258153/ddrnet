@@ -9,3 +9,16 @@
 ```bash
 PYTHONDONTWRITEBYTECODE=1 python -B tools/train.py --cfg experiments/cityscapes/test.yaml TRAIN.BATCH_SIZE_PER_GPU 12 && /usr/bin/shutdown
 ```
+
+### 评估
+test.yaml 文件TEST_SET变量改为 'list/infrared_images/evaluation.lst'
+在 `lib/config/default.py` 中将 _C.MODEL.USE_EMA 改为True
+```bash
+python tools/eval.py --cfg experiments/cityscapes/test.yaml
+```
+
+### 生成对比图
+```bash
+python tools/make_comparison.py
+```
+> 在 `output/infrared_images/comparison_images` 下生成四格对比图

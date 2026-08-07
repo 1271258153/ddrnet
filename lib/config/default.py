@@ -37,6 +37,8 @@ _C.MODEL.NAME = 'seg_hrnet'
 _C.MODEL.PRETRAINED = ''
 _C.MODEL.ALIGN_CORNERS = True
 _C.MODEL.NUM_OUTPUTS = 2
+_C.MODEL.USE_EMA = True
+_C.MODEL.EMA_FACTOR = 8
 _C.MODEL.EXTRA = CN(new_allowed=True)
 
 

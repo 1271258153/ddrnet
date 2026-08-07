@@ -210,3 +210,9 @@ class infrared_images(BaseDataset):
             pred = self.label2color(preds[i])
             save_img = Image.fromarray(pred)
             save_img.save(os.path.join(sv_path, name[i]+'.png'))
+
+    # testval 调用的是 save_pred2(image, pred, sv_path, name)，这里复用彩色保存逻辑
+    def save_pred2(self, image, preds, sv_path, name):
+        if not os.path.exists(sv_path):
+            os.makedirs(sv_path, exist_ok=True)
+        self.save_pred(preds, sv_path, name)

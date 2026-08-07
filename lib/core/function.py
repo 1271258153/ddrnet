@@ -211,7 +211,7 @@ def testval(config, test_dataset, testloader, model,
             if sv_pred:
                 sv_path = os.path.join(sv_dir, 'test_results')
                 if not os.path.exists(sv_path):
-                    os.mkdir(sv_path)
+                    os.makedirs(sv_path, exist_ok=True)
                 test_dataset.save_pred2(image, pred, sv_path, name)
 
             if index % 100 == 0:
