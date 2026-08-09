@@ -166,7 +166,7 @@ def testval(config, test_dataset, testloader, model,
         (config.DATASET.NUM_CLASSES, config.DATASET.NUM_CLASSES))
     with torch.no_grad():
         for index, batch in enumerate(tqdm(testloader)):
-            image, label, _, name, *border_padding = batch
+            image, label, ori_size, name, *border_padding = batch
             size = label.size()
             pred = test_dataset.multi_scale_inference(
                 config,
@@ -212,7 +212,15 @@ def testval(config, test_dataset, testloader, model,
                 sv_path = sv_dir
                 if not os.path.exists(sv_path):
                     os.makedirs(sv_path, exist_ok=True)
-                test_dataset.save_pred2(image, pred, sv_path, name)
+                # 保存前把预测 resize 回原图尺寸（ori_size = [H, W, 3]）
+                ori_h, ori_w = int(ori_size[0][0]), int(ori_size[0][1])
+                if pred.size()[-2] != ori_h or pred.size()[-1] != ori_w:
+                    pred_save = F.interpolate(
+                        pred, (ori_h, ori_w),
+                        mode='bilinear', align_corners=config.MODEL.ALIGN_CORNERS)
+                else:
+                    pred_save = pred
+                test_dataset.save_pred2(image, pred_save, sv_path, name)
 
             if index % 100 == 0:
                 logging.info('processing: %d images' % index)
