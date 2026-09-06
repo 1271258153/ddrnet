@@ -22,3 +22,8 @@ python tools/eval.py --cfg experiments/cityscapes/test.yaml
 python tools/make_comparison.py
 ```
 > 在 `output/infrared_images/comparison_images` 下生成四格对比图
+
+### 计算FPS和参数量
+```bash
+python tools/get_fps_and_pm.py --device cuda
+```
