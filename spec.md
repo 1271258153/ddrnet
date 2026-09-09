@@ -23,6 +23,11 @@ python tools/make_comparison.py
 ```
 > 在 `output/infrared_images/comparison_images` 下生成四格对比图
 
+```bash
+# 只生成(指定张图片)叠加图
+python tools/make_comparison.py --pred-dir output/infrared_images/val_result/ --out-dir output/infrared_images/overlay_images --image 045.png --overlay-only
+```
+
 ### 计算FPS和参数量
 ```bash
 python tools/get_fps_and_pm.py --device cuda
