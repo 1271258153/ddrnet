@@ -13,7 +13,9 @@
         --pred-dir output/infrared_images/evaluation_result/test_results \
         --out-dir output/infrared_images/overlay_images \
         --image example.png \
-        --overlay-only
+        --overlay-only \
+        --color-weight 0.7 \
+        --background-weight 0.6
 """
 import argparse
 import os
@@ -50,8 +52,22 @@ def label2color(label):
     return color_map
 
 
-def overlay(image, color_mask, alpha=0.5):
-    return (image * (1 - alpha) + color_mask * alpha).astype(np.uint8)
+def overlay(image, color_mask, alpha=0.5, foreground_only=False,
+            background_weight=1.0):
+    blended = (image * (1 - alpha) + color_mask * alpha).astype(np.uint8)
+    if not foreground_only:
+        return blended
+    result = (image * background_weight).astype(np.uint8)
+    foreground = np.any(color_mask != 0, axis=2)
+    result[foreground] = blended[foreground]
+    return result
+
+
+def unit_float(value):
+    value = float(value)
+    if not 0.0 <= value <= 1.0:
+        raise argparse.ArgumentTypeError('必须在 0 到 1 之间')
+    return value
 
 
 def hconcat(imgs, gap=4, gap_color=(255, 255, 255)):
@@ -75,10 +91,19 @@ def main():
     parser.add_argument('--alpha', default=0.5, type=float, help='叠加图中预测的权重')
     parser.add_argument('--overlay-only', action='store_true',
                         help='仅保存原图与预测 mask 的叠加图')
+    parser.add_argument('--color-weight', type=unit_float, default=None,
+                        help='使用 --overlay-only 时预测颜色的权重（0-1，默认沿用 --alpha）')
+    parser.add_argument('--background-weight', type=unit_float, default=1.0,
+                        help=('使用 --overlay-only 时背景原图的亮度权重'
+                              '（0-1，0 为全黑，1 保持原图，默认 1）'))
     parser.add_argument('--image', type=str,
                         help='仅处理指定图片，支持文件名、无扩展名名称或列表中的相对路径')
     parser.add_argument('opts', default=None, nargs=argparse.REMAINDER)
     args = parser.parse_args()
+    if args.color_weight is not None and not args.overlay_only:
+        parser.error('--color-weight 只能与 --overlay-only 一起使用')
+    if args.background_weight != 1.0 and not args.overlay_only:
+        parser.error('--background-weight 只能与 --overlay-only 一起使用')
     update_config(config, args)
 
     root = config.DATASET.ROOT
@@ -125,12 +150,17 @@ def main():
 
         h, w = image.shape[:2]
         # 预测是 resize 到 crop_size 的，统一缩回原图尺寸
-        pred = cv2.resize(pred, (w, h), interpolation=cv2.INTER_LINEAR)
+        pred = cv2.resize(pred, (w, h), interpolation=cv2.INTER_NEAREST)
 
         pred_color = cv2.cvtColor(pred, cv2.COLOR_BGR2RGB)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        ov = overlay(image_rgb, pred_color, alpha=args.alpha)
+        color_weight = (args.color_weight
+                        if args.overlay_only and args.color_weight is not None
+                        else args.alpha)
+        ov = overlay(image_rgb, pred_color, alpha=color_weight,
+                     foreground_only=args.overlay_only,
+                     background_weight=args.background_weight)
         if args.overlay_only:
             output = ov
         else:

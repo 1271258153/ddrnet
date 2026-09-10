@@ -25,7 +25,7 @@ python tools/make_comparison.py
 
 ```bash
 # 只生成(指定张图片)叠加图
-python tools/make_comparison.py --pred-dir output/infrared_images/val_result/ --out-dir output/infrared_images/overlay_images --image 045.png --overlay-only
+python tools/make_comparison.py --pred-dir output/infrared_images/val_result/ --out-dir output/infrared_images/overlay_images --image 045.png --overlay-only --color-weight 0.9 --background-weight 0.5
 ```
 
 ### 计算FPS和参数量
